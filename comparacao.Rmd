@@ -1,0 +1,165 @@
+---
+title: "Natal ou Porto Alegre: Onde o Verão é Mais Quente?"
+author: "Marcus Nunes"
+date: "03 de Novembro de 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align="center")
+```
+
+# tl;dr
+
+Porto Alegre é mais quente do que Natal no verão.
+
+# Um Pouco de História
+
+Eu moro em Natal, RN, mas sou natural de São Leopoldo, RS. Também sou professor de Estatística. Quando falo de análise de dados com meus alunos, tem uma afirmação minha da qual eles sempre duvidam: Porto Alegre é mais quente do que Natal no verão.
+
+Só quem morou no sul e sudeste, em cidades com clima subtropical e afetadas pela continentalidade, sabem do que estou falando. Embora nossa memória nos traia às vezes, sempre tive a impressão de que os verões em Porto Alegre são mais quentes do que os verões em Natal.
+
+Para provar ou desprovar esta afirmação, baixei os dados do [BDMEP - Banco de Dados Meteorológicos para Ensino e Pesquisa](http://www.inmet.gov.br/projetos/rede/pesquisa/) referentes à temperatura máxima diária em Natal e Porto Alegre entre 1 de janeiro de 2002 e 31 de dezembro de 2016. Ou seja, são 15 anos de dados de temperatura diária nestas duas cidades que irão sustentar (ou não) minha afirmação.
+
+# Análise Descritiva
+
+Alguns pacotes são necessários para processar os dados e plotar os gráficos. Caso eles não estejam instalados em seu computador, por favor instale-os.
+
+
+```{r NatalPoa01, message=FALSE}
+library(dplyr)
+library(ggplot2)
+theme_set(theme_bw() + theme(plot.title = element_text(hjust = 0.5)))
+library(lubridate)
+library(reshape2)
+
+# leitura dos dados de Natal
+
+natal      <- as_data_frame(read.table(file="natal_completo.csv", sep=";", header=TRUE))
+natal$Data <- dmy(natal$Data)
+
+# remover NA
+
+natal.media <- natal %>%
+  select(Data, Temp.Comp.Media) %>%
+  na.omit
+
+# leitura dos dados de Porto Alegre
+
+poa <- as_data_frame(read.table(file="portoalegre_completo.csv", sep=";", header=TRUE))
+
+poa$Data <- dmy(poa$Data)
+
+# remover NA
+
+poa.media <- poa %>%
+  select(Data, Temp.Comp.Media) %>%
+  na.omit
+
+# juntar os bancos de dados
+
+media <- inner_join(poa.media, natal.media, by="Data")
+
+# renomear as colunas
+
+names(media) <- c("Data", "Porto Alegre", "Natal")
+
+# preparacao final do banco de dados
+
+media <- data_frame(Data=c(media$Data, media$Data), 
+                    Cidade=rep(c("Porto Alegre", "Natal"), each=length(media$Data)), 
+                    Temperatura=c(media$"Porto Alegre", media$Natal))
+
+# grafico
+
+ggplot(media, aes(x=Data, y=Temperatura, colour=Cidade)) +
+  geom_line() +
+  geom_smooth(method="lm", se=FALSE) +
+  scale_x_date(breaks=seq(min(media$Data), max(media$Data), by="5 year"), date_labels="%Y", minor_breaks=seq(min(media$Data), max(media$Data), by="5 year")) +
+  labs(title="Temperatura Média Diária") +
+  scale_y_continuous(breaks=seq(0, 35, 5))
+```
+
+Este gráfico, que possui informação desde 1961, não ficou bom. Faltam muitos dados dos anos 70 e 80, além de algumas informações do início dos anos 2000. Por isso, resolvi manter apenas os dados de 1 de janeiro de 2002 em diante:
+
+
+```{r NatalPoa02}
+natal      <- as_data_frame(read.table(file="natal_completo.csv", sep=";", header=TRUE))
+natal$Data <- dmy(natal$Data)
+
+natal.media <- natal %>%
+  select(Data, Temp.Comp.Media) %>%
+  filter(Data>="2002-01-01") %>%
+  na.omit
+
+poa <- as_data_frame(read.table(file="portoalegre_completo.csv", sep=";", header=TRUE))
+
+poa$Data <- dmy(poa$Data)
+
+poa.media <- poa %>%
+  select(Data, Temp.Comp.Media) %>%
+  filter(Data>="2002-01-01") %>%
+  na.omit
+
+media <- inner_join(poa.media, natal.media, by="Data")
+
+names(media) <- c("Data", "Porto Alegre", "Natal")
+
+media <- data_frame(Data=c(media$Data, media$Data), 
+                    Cidade=rep(c("Porto Alegre", "Natal"), each=length(media$Data)), 
+                    Temperatura=c(media$"Porto Alegre", media$Natal))
+
+ggplot(media, aes(x=Data, y=Temperatura, colour=Cidade)) +
+  geom_line() +
+  scale_x_date(breaks=seq(min(media$Data), max(media$Data), by="1 year"), date_labels="%Y", minor_breaks=seq(min(media$Data), max(media$Data), by="1 year")) +
+  labs(title="Temperatura Média Diária") +
+  scale_y_continuous(breaks=seq(0, 35, 5))
+```
+
+Pronto. Melhor agora.
+
+Podemos ver claramente no gráfico como Porto Alegre tem dias mais quentes do que Natal, principalmente no início do ano, na época do verão. Mas a quantidade deles é muito inferior ao que eu me lembro. Algo não parece certo.
+
+Mas foi aí que percebi que os dados que reporteiutilizei acima eram da temperatura média do dia. Porto Alegre tem uma aplitude de temperatura muito alta, inclusive no verão. Os dias começam frescos, mas acabam esquentando muito. Por isso refiz os gráficos, agora considerando a temperatura máxima atingida no dia:
+
+
+```{r NatalPoa03}
+natal      <- as_data_frame(read.table(file="natal_completo.csv", sep=";", header=TRUE))
+natal$Data <- dmy(natal$Data)
+
+natal.media <- natal %>%
+  select(Data, TempMaxima) %>%
+  filter(Data>="2002-01-01") %>%
+  na.omit
+
+poa <- as_data_frame(read.table(file="portoalegre_completo.csv", sep=";", header=TRUE))
+
+poa$Data <- dmy(poa$Data)
+
+poa.media <- poa %>%
+  select(Data, TempMaxima) %>%
+  filter(Data>="2002-01-01") %>%
+  na.omit
+
+media <- inner_join(poa.media, natal.media, by="Data")
+
+names(media) <- c("Data", "Porto Alegre", "Natal")
+
+media <- data_frame(Data=c(media$Data, media$Data), 
+                    Cidade=rep(c("Porto Alegre", "Natal"), each=length(media$Data)), 
+                    Temperatura=c(media$"Porto Alegre", media$Natal))
+
+ggplot(media, aes(x=Data, y=Temperatura, colour=Cidade)) +
+  geom_line(alpha=.5) +
+  scale_x_date(breaks=seq(min(media$Data), max(media$Data), by="1 year"), date_labels="%Y", minor_breaks=seq(min(media$Data), max(media$Data), by="1 year")) +
+  labs(title="Temperatura Máxima Diária") +
+  scale_y_continuous(breaks=seq(0, 40, 5))
+```
+
+Bingo! A quantidade de dias de calor intenso em Porto Alegre, com a máxima passando dos 35ºC, é muito maior do que em Natal. Inclusive, Natal não teve um dia sequer, nos últimos 15 anos, em que a temperatuda máxima passou dos 35ºC.
+
+Portanto, como eu lembrava, Porto Alegre é uma cidade muito mais quente do que Natal no verão.
+
+<hr>
+
+Marcus Nunes - http://marcusnunes.me/
