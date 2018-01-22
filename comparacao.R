@@ -7,40 +7,7 @@ library(reshape2)
 # site: http://www.inmet.gov.br/projetos/rede/pesquisa/
 # precisa de cadastro, mas eh gratuito e automatico
 
-# leitura dos dados - 5 anos
-
-natal      <- as_data_frame(read.table(file="natal.csv", sep=";", header=TRUE))
-natal$Data <- dmy(natal$Data)
-
-natal.media <- natal %>%
-  select(Data, Temp.Comp.Media) %>%
-  na.omit
-
-poa <- as_data_frame(read.table(file="portoalegre.csv", sep=";", header=TRUE))
-
-poa$Data <- dmy(poa$Data)
-
-poa.media <- poa %>%
-  select(Data, Temp.Comp.Media) %>%
-  na.omit
-
-media <- inner_join(poa.media, natal.media, by="Data")
-
-names(media) <- c("Data", "Porto Alegre", "Natal")
-
-media <- data_frame(Data=c(media$Data, media$Data), 
-                    Cidade=rep(c("Porto Alegre", "Natal"), each=length(media$Data)), 
-                    Temperatura=c(media$"Porto Alegre", media$Natal))
-
-ggplot(media, aes(x=Data, y=Temperatura, colour=Cidade)) +
-  geom_line() +
-  #geom_smooth(method="lm", se=FALSE) +
-  scale_x_date(breaks=seq(min(media$Data), max(media$Data), by="6 month"), date_labels="%b/%Y", minor_breaks=seq(min(media$Data), max(media$Data), by="6 month")) +
-  scale_y_continuous(breaks=seq(0, 35, 5))
-
-
-
-# leitura dos dados - completo
+# leitura dos dados
 
 natal      <- as_data_frame(read.table(file="natal_completo.csv", sep=";", header=TRUE))
 natal$Data <- dmy(natal$Data)
